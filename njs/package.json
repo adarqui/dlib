@@ -1,0 +1,35 @@
+{
+"name": "dlib",
+"preferGlobal": false,
+"version": "0.0.1",
+"author": "adarqui",
+"description": "stop repeating code!",
+"contributors": [
+{
+"name": "Andrew Darqui",
+"email": "andrew.darqui@gmail.com"
+}
+],
+"keywords": [
+"library"
+],
+"dependencies" : {
+"underscore" : "~1.5.2",
+"lazy" : "~1.0.11",
+"nconf" : "~0.6.7",
+"express" : "~3.4.2",
+"socket.io" : "~0.9.15",
+"redis" : "~0.8.6",
+"glob" : "~3.2.6",
+"async" : "~0.2.9",
+"winston" : "~0.7.2",
+"vows" : "*",
+"assert" : "*",
+"request" : "*",
+"connect" : "*"
+},
+"license": "MIT",
+"engines": {
+"node": ">=0.9"
+}
+}
