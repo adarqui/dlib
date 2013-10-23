@@ -12,6 +12,26 @@ var _Tls = function(opts) {
 		channel : {},
 		prefix : "tls"
 	}
+	Private.on = {
+		client : {
+			/*
+			 * connection
+			 * data
+			 * end
+			 * error
+			 */
+		},
+		server : {
+			/*
+			 * listening
+			 * connection
+			 * data
+			 * end
+			 * server_error
+			 * client_error
+			 */
+		},
+	}
 
 	Private.Error = function(m,data) {
 		throw new Error(m,data);
@@ -22,41 +42,98 @@ var _Tls = function(opts) {
 		console.log(Private.prefix+fn+"()",data ? data : '');
 	}
 
-	Private.ClientCB = function(stream) {
-		Private.Debug("Tls.ClientCB",stream);
+	Private.on.client.Connection = function(stream) {
+		Private.Debug("Tls.Client:Connection");
 	}
 
-	Private.ServerCB = function(stream) {
-		Private.Debug("Tls.ServerCB",stream);
+	Private.on.client.Data = function(data) {
+		Private.Debug("Data",data);
+	}
+
+	Private.on.client.End = function() {
+		Private.Debug("End");
+	}
+
+	Private.on.client.Error = function() {
+		Private.Debug("Error");
 	}
 
 	Private.ClientSetup = function() {
-		Private.channel.on('data', function(data) {
-			Private.Debug("Private.ClientSetup","Received data : ["+data+"]");
-		});
-		Private.channel.on('end', function() {
-			Private.Debug("Private.ClientSetup","Received disconnect");
-		});
+		Private.channel.on('data', Private.on.client.Data);
+		Private.channel.on('end', Private.on.client.End);
+		Private.channel.on('error', Private.on.client.Error);
 	}
 
 	Private.ServerSetup = function() {
-		Private.channel.listen(Private.opts.channel.port, function() {
-			Private.Debug("Private.ServerSetup", "listening!");
-		});
+		Private.channel.listen(Private.opts.channel.port, Private.on.server.Listening);
+	}
+
+	Private.on.server.Listening = function(stream) {
+		Private.Debug("Tls.Server:Listening",stream);
+	}
+
+	Private.on.server.Connection = function(stream) {
+		console.log("CONNECTED!!!!!!!!!!",stream);
+		stream.on('data', Private.on.server.Data);
+		Private.channel.on('data', Private.on.server.Data);
+
+		stream.on('error', Private.on.server.Client_Error);
+
+		if(Private.opts.on.connection) {
+			return Private.opts.on.connection(stream);
+		}
+	}
+
+	Private.on.server.Server_Error = function(err) {
+		Private.Debug("Server_Error");
+	}
+
+	Private.on.server.Client_Error = function(err, stream) {
+		Private.Debug("Client_Error");
+	}
+
+
+	Tls.Write = function(data) {
+		Private.channel.write(data);
 	}
 
 	Tls.Init = function() {
 		try {
 			switch(Private.opts.channel.type) {
 				case 'client': {
-					Private.channel = tls.connect(Private.opts.channel.port, Private.opts.options, Private.ClientCB);
+					if(Private.opts.on.connection) {
+						Private.on.client.Connection = Private.opts.on.connection;
+					}
+					if(Private.opts.on.data) {
+						Private.on.client.Data = Private.opts.on.data;
+					}
+					if(Private.opts.on.end) {
+						Private.on.client.End = Private.opts.on.end;
+					}
+					if(Private.opts.on.error) {
+						Private.on.client.Error = Private.opts.on.error;
+					}
+					console.log(Private.opts.on, '--------------', Private.on);
+					Private.channel = tls.connect(Private.opts.channel.port, Private.opts.options, Private.on.client.Connection);
 					Private.ClientSetup();
 					Private.prefix = Private.prefix + ':client:';
 					break;
 				}
 				case 'server' : {
 					console.log(Private.opts.options);
-					Private.channel = tls.createServer(Private.opts.options, Private.ServerCB);
+
+					if(Private.opts.on.data) {
+						Private.on.server.Data = Private.opts.on.data;
+					}
+					if(Private.opts.on.server_error) {
+						Private.on.server.Server_Error = Private.opts.on.server_error;
+					}
+					if(Private.opts.on.client_error) {
+						Private.on.server.Client_Error = Private.opts.on.client_error;
+					}
+
+					Private.channel = tls.createServer(Private.opts.options, Private.on.server.Connection);
+					Private.channel.on('error', Private.on.server.Server_Error);
 					Private.ServerSetup();
 					Private.prefix = Private.prefix + ':server:';
 					break;

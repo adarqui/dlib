@@ -19,7 +19,22 @@ var tlsServer = new _tls({
 		ca : "/tmp/certs/server-csr.pem",
 	},
 	options : {
-		//requestCert : true,
+		requestCert : true,
+//		rejectUnauthorized : true,
+	},
+	on : {
+		connection : function(stream) {
+			console.log("authorized?", stream.authorizd, stream.getPeerCertificate());
+		},
+		data : function(data) {
+			console.log("Server data",data.toString());
+		},
+		server_error : function(err) {
+			console.log("Server error", err);
+		},
+		client_error : function(err,stream) {
+			console.log("Client error", err);
+		}
 	},
 });
 tlsServer.Init();
@@ -37,6 +52,17 @@ setTimeout(function() {
 			pub : "/tmp/certs/client.pem",
 		},
 		options : {
+		},
+		on : {
+			connection : function(stream) {
+				setInterval(function() { console.log("client"); tlsClient.Write("hi\n"); }, 2000);
+			},
+			data : function(data) {
+				console.log("data",data);
+			},
+			error : function(err) {
+				console.log("client error", err);
+			},
 		},
 	});
 
