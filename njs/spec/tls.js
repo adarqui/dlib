@@ -18,9 +18,12 @@ var tlsServer = new _tls({
 		pub : "/tmp/certs/server-cert.pem",
 		ca : "/tmp/certs/server-csr.pem",
 	},
+	redis : {
+		sock : "/tmp/redis.sock",
+	},
 	options : {
 		requestCert : true,
-//		rejectUnauthorized : true,
+		tlsKeys : true,
 	},
 	on : {
 		connection : function(stream) {
@@ -41,6 +44,8 @@ tlsServer.Init();
 
 
 setTimeout(function() {
+
+	var timer;
 	var tlsClient = new _tls({
 		channel : {
 			host : "127.0.0.1",
@@ -52,10 +57,12 @@ setTimeout(function() {
 			pub : "/tmp/certs/client.pem",
 		},
 		options : {
+			reconnect : true,
 		},
 		on : {
 			connection : function(stream) {
-				setInterval(function() { console.log("client"); tlsClient.Write("hi\n"); }, 2000);
+				if(timer) { clearInterval(timer); timer = undefined }
+				timer = setInterval(function() { console.log("client"); tlsClient.Write("hi\n"); }, 2000);
 			},
 			data : function(data) {
 				console.log("data",data);
@@ -66,5 +73,40 @@ setTimeout(function() {
 		},
 	});
 
-	tlsClient.Init();
+//	tlsClient.Init();
 }, 1000);
+
+
+
+setTimeout(function() {
+
+	var timer;
+	var tlsClientWrongKeys = new _tls({
+		channel : {
+			host : "127.0.0.1",
+			port : 8080,
+			type : "client",
+		},
+		cert : {
+			key : "/tmp/certs2/client.key",
+			pub : "/tmp/certs2/client.pem",
+		},
+		options : {
+			reconnect : true,
+		},
+		on : {
+			connection : function(stream) {
+				if(timer) { clearInterval(timer); timer = undefined }
+				timer = setInterval(function() { console.log("client"); tlsClientWrongKeys.Write("hi\n"); }, 2000);
+			},
+			data : function(data) {
+				console.log("data",data);
+			},
+			error : function(err) {
+				console.log("client error", err);
+			},
+		},
+	});
+
+	tlsClientWrongKeys.Init();
+}, 2000);

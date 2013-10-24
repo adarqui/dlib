@@ -1,0 +1,3 @@
+#!/bin/bash
+
+openssl x509 -noout -fingerprint -in $1 | awk -F'=' '{print $2}'
